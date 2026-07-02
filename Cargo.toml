@@ -1,0 +1,9 @@
+[package]
+name = "arena_management"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+cargo-llvm-cov = "0.8.7"
+clippy = "0.0.302"
+criterion = "0.8.2"
