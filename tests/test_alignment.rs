@@ -1,5 +1,6 @@
 /*
-    Alignment testing
+    Alignment testing, ensuring that the alignment is working as expected
+    based on the ptr we get back. I'm using alignment of 8 bytes here.
 */
 use arena_management::{allocator::AdAllocator, bump::Bump};
 

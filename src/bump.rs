@@ -13,6 +13,11 @@ pub struct Bump {
     align: usize,
 }
 
+/* 
+    because we have UnsafeCell, we need to specify unsafe Sync for Bump.
+    This is OK, because it is safe to share in this code.
+    We just need to promise the compiler here.
+*/ 
 unsafe impl Sync for Bump {}
 
 impl Default for Bump {
