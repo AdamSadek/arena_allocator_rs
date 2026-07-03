@@ -40,7 +40,7 @@ fn allocate_past_end() {
 fn allocate_all_space() {
     let arena = AdAllocator { bump: Bump::new() };
     let ptr = arena.bump.bump(arena.bump.end);
-    assert!(!ptr.is_none());
+    assert!(ptr.is_some());
 }
 
 #[test]
@@ -54,7 +54,7 @@ fn allocate_all_space_and_1_byte_more() {
 fn allocate_zero_bytes() {
     let arena = AdAllocator { bump: Bump::new() };
     let ptr = arena.bump.bump(0);
-    assert!(!ptr.is_none());
+    assert!(ptr.is_some());
 }
 
 #[test]

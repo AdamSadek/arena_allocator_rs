@@ -5,19 +5,15 @@ use std::{
 
 const ARENA_SIZE: usize = 1024*1024;
 
-// the loader gives this an address at process start
-struct ArenaStorage(UnsafeCell<[u8; ARENA_SIZE]>);
-
-unsafe impl Sync for ArenaStorage {}
-
-static ARENA: ArenaStorage = ArenaStorage(UnsafeCell::new([0u8; ARENA_SIZE]));
-
 #[derive(Debug)]
 pub struct Bump {
+    storage: Box<UnsafeCell<[u8; ARENA_SIZE]>>,
     next: AtomicUsize, // byte OFFSET into ARENA. i.e. "1024 bytes into the arena."
     pub end: usize,
     align: usize,
 }
+
+unsafe impl Sync for Bump {}
 
 impl Default for Bump {
     fn default() -> Self {
@@ -26,8 +22,9 @@ impl Default for Bump {
 }
 
 impl Bump {
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Bump {
+            storage: Box::new(UnsafeCell::new([0u8; ARENA_SIZE])),
             next: AtomicUsize::new(0),
             end: ARENA_SIZE,
             align: 8,
@@ -35,7 +32,7 @@ impl Bump {
     }
 
     pub fn bump(&self, size: usize) -> Option<*mut u8> {
-        let base = ARENA.0.get() as *mut u8;
+        let base = self.storage.get() as *mut u8;
         loop {
             let current = self.next.load(Ordering::Relaxed);
             let aligned = (current + self.align - 1) & !(self.align - 1); // revisit
