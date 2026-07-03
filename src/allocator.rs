@@ -1,21 +1,18 @@
 use crate::bump::Bump;
 
-use std::{
-    alloc::{GlobalAlloc, Layout, System},
-    sync::{LazyLock, Mutex},
-};
+use std::alloc::{GlobalAlloc, Layout};
+
 pub struct AdAllocator {
-    pub bump: LazyLock<Mutex<Bump>>,
+    pub bump: Bump,
 }
 
 unsafe impl GlobalAlloc for AdAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        unsafe { System.alloc(layout) }
+        self.bump.bump(layout.size())
     }
 
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        unsafe {
-            System.dealloc(ptr, layout);
-        }
+    unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
+        // Bump arenas dont free individual allocations.
+        // The arena's memory is only reclaimed as a whole.
     }
 }
