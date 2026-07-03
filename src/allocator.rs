@@ -8,7 +8,7 @@ pub struct AdAllocator {
 
 unsafe impl GlobalAlloc for AdAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        self.bump.bump(layout.size())
+        self.bump.bump(layout.size()).unwrap()
     }
 
     unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
