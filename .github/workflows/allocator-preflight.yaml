@@ -1,0 +1,16 @@
+name: Arena Allocator CI
+on: [push]
+env:
+  CARGO_TERM_QUIET: "true"
+jobs:
+  test:
+    name: Code Coverage Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test and coverage
+        run: |
+          cargo test
+          cargo install cargo-llvm-cov
+          cargo llvm-cov --fail-under-lines 90 --all-features
+        
