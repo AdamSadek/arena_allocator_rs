@@ -4,23 +4,41 @@ use std::{
     alloc::Layout,
 };
 
+/// Total capacity of a single arena, in bytes (1 MiB).
 const ARENA_SIZE: usize = 1024 * 1024;
 
+/// A fixed-size, lock-free bump allocator.
+///
+/// The arena holds one buffer and gives out slices of it by moving a single
+/// atomic cursor forward (see [`Bump::bump`]). Allocations are never freed one
+/// at a time. All the memory is freed when the `Bump` is dropped.
+///
+/// `Bump` is [`Sync`], so you can share it between threads. Two threads that
+/// allocate at the same time settle it with a compare-and-swap loop.
 #[derive(Debug)]
 pub struct Bump {
+    /// The buffer we allocate from. It sits in an [`UnsafeCell`] because
+    /// [`Bump::bump`] gives out `*mut u8` pointers into it through `&self`.
     storage: UnsafeCell<Vec<u8>>,
-    next: AtomicUsize, // byte OFFSET into ARENA. i.e. "1024 bytes into the arena."
+    /// The cursor. This is a byte offset into the buffer (so `1024` means "1024
+    /// bytes in"), not a real address.
+    next: AtomicUsize,
+    /// The offset just past the end of the buffer. Allocations can't go beyond
+    /// it. Equal to `ARENA_SIZE`.
     end: usize,
 }
 
-/*  
-    because we have UnsafeCell, we need to specify unsafe Sync for Bump.
-    This is OK, because it is safe to share in this code.
-    We just need to promise the compiler here.
-*/ 
+// SAFETY: an `UnsafeCell` is not `Sync` on its own, so we opt in by hand.
+// Sharing a `Bump` between threads is fine because the buffer only changes
+// through `bump`, which claims each region with an atomic compare-and-swap on
+// `next`. Two threads can never get the same region, so the bytes never race.
 unsafe impl Sync for Bump {}
 
 impl Bump {
+    /// Makes a new, empty arena that can hold `ARENA_SIZE` bytes.
+    ///
+    /// The buffer is zeroed when it is created, so this cost grows with the
+    /// arena size.
     pub fn new() -> Self {
         Bump {
             storage: UnsafeCell::new(vec![0u8; ARENA_SIZE]),
@@ -29,29 +47,60 @@ impl Bump {
         }
     }
 
+    /// Allocates `layout.size()` bytes with the alignment from `layout`.
+    ///
+    /// Returns a pointer to the start of the region, or [`None`] if the arena is
+    /// out of room. The pointer stays valid as long as the `Bump` is alive, and
+    /// no other caller ever gets the same region.
+    ///
+    /// It is lock-free, so many threads can call it at once.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arena_management::bump::Bump;
+    /// use std::alloc::Layout;
+    ///
+    /// let arena = Bump::new();
+    /// let layout = Layout::from_size_align(64, 8).unwrap();
+    /// let ptr = arena.bump(layout).unwrap();
+    /// assert_eq!(ptr as usize % 8, 0); // honours the requested alignment
+    /// ```
     pub fn bump(&self, layout: Layout) -> Option<*mut u8> {
+        // SAFETY: this only reads the buffer's data pointer, it does not change
+        // the buffer. The pointer stays good because the buffer is never resized
+        // after it is created.
         let base = unsafe { (*self.storage.get()).as_mut_ptr() };
         loop {
             let current = self.next.load(Ordering::Relaxed);
+            // Round the cursor up to the alignment we need. This works because
+            // `Layout` promises the alignment is a power of two.
             let aligned = (current + layout.align() - 1) & !(layout.align() - 1);
             let new_next = aligned + layout.size();
             if new_next > self.end {
-                return None; // no room left so OOM
+                return None;
             }
 
-            /*
-              incase one thread beats another, we can first check if next is at current,
-              then we change it to new_next, else if it's already at new_next that means
-              another thread did it already.
-            */
+            // Only claim the region if no other thread moved the cursor while we
+            // were reading it. If one did, `current` is stale, so we loop and try
+            // again. The `_weak` version can also fail for no reason, and the
+            // loop handles that too.
             if self
                 .next
                 .compare_exchange_weak(current, new_next, Ordering::SeqCst, Ordering::Relaxed)
                 .is_ok()
             {
+                // SAFETY: `aligned` is inside the buffer, and the swap above just
+                // claimed this region for us alone, so no one else can use it.
                 return unsafe { Some(base.add(aligned)) };
             }
         }
+    }
+}
+
+impl Default for Bump {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
