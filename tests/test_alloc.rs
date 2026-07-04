@@ -1,10 +1,9 @@
-use std::alloc::{GlobalAlloc, Layout};
-
 /*  
     Testing different alloc cases. 
     Contains coverage on happy paths and boundries (edges).
 */
 use arena_management::{allocator::AdAllocator, bump::Bump};
+use std::alloc::{GlobalAlloc, Layout};
 
 #[test]
 fn allocate_64_bytes() {

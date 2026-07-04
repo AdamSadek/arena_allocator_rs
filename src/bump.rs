@@ -8,7 +8,7 @@ const ARENA_SIZE: usize = 1024 * 1024;
 
 #[derive(Debug)]
 pub struct Bump {
-    storage: Box<UnsafeCell<[u8; ARENA_SIZE]>>,
+    storage: UnsafeCell<Vec<u8>>,
     next: AtomicUsize, // byte OFFSET into ARENA. i.e. "1024 bytes into the arena."
     pub end: usize,
 }
@@ -23,7 +23,7 @@ unsafe impl Sync for Bump {}
 impl Bump {
     pub fn new() -> Self {
         Bump {
-            storage: Box::new(UnsafeCell::new([0u8; ARENA_SIZE])),
+            storage: UnsafeCell::new(vec![0u8; ARENA_SIZE]),
             next: AtomicUsize::new(0),
             end: ARENA_SIZE,
         }
