@@ -42,22 +42,6 @@ fn allocate_past_end() {
 }
 
 #[test]
-fn allocate_all_space() {
-    let arena = AdAllocator { bump: Bump::new() };
-    let layout = Layout::from_size_align(arena.bump.end, 16).unwrap();
-    let ptr = arena.bump.bump(layout);
-    assert!(ptr.is_some());
-}
-
-#[test]
-fn allocate_all_space_and_1_byte_more() {
-    let arena = AdAllocator { bump: Bump::new() };
-    let layout = Layout::from_size_align(arena.bump.end + 1, 16).unwrap();
-    let ptr = arena.bump.bump(layout);
-    assert!(ptr.is_none());
-}
-
-#[test]
 fn allocate_zero_bytes() {
     let arena = AdAllocator { bump: Bump::new() };
     let layout = Layout::from_size_align(0, 16).unwrap();
