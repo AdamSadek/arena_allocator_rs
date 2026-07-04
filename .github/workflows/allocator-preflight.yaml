@@ -1,9 +1,10 @@
 name: Arena Allocator CI
-on: [push, pull_request]
+on: [push]
 env:
   CARGO_TERM_QUIET: "true"
 jobs:
   test:
+    name: Code Coverage Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
