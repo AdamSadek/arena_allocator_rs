@@ -3,7 +3,7 @@ use std::{
     sync::atomic::{AtomicUsize, Ordering},
 };
 
-const ARENA_SIZE: usize = 1024*1024;
+const ARENA_SIZE: usize = 1024 * 1024;
 
 #[derive(Debug)]
 pub struct Bump {
@@ -13,7 +13,7 @@ pub struct Bump {
     align: usize,
 }
 
-/* 
+/*  
     because we have UnsafeCell, we need to specify unsafe Sync for Bump.
     This is OK, because it is safe to share in this code.
     We just need to promise the compiler here.

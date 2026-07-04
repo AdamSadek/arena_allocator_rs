@@ -1,5 +1,6 @@
-/*
-    Testing different alloc cases. Contains coverage on happy paths and boundries (edges).
+/*  
+    Testing different alloc cases. 
+    Contains coverage on happy paths and boundries (edges).
 */
 use arena_management::{allocator::AdAllocator, bump::Bump};
 
@@ -60,6 +61,6 @@ fn allocate_zero_bytes() {
 #[test]
 fn allocate_size_bigger_than_arena() {
     let arena = AdAllocator { bump: Bump::new() };
-    let ptr = arena.bump.bump(4096*4096);
+    let ptr = arena.bump.bump(4096 * 4096);
     assert!(ptr.is_none());
 }
