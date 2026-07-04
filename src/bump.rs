@@ -1,6 +1,7 @@
 use std::{
     cell::UnsafeCell,
     sync::atomic::{AtomicUsize, Ordering},
+    alloc::Layout,
 };
 
 const ARENA_SIZE: usize = 1024 * 1024;
@@ -10,7 +11,6 @@ pub struct Bump {
     storage: Box<UnsafeCell<[u8; ARENA_SIZE]>>,
     next: AtomicUsize, // byte OFFSET into ARENA. i.e. "1024 bytes into the arena."
     pub end: usize,
-    align: usize,
 }
 
 /*  
@@ -20,28 +20,21 @@ pub struct Bump {
 */ 
 unsafe impl Sync for Bump {}
 
-impl Default for Bump {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl Bump {
     pub fn new() -> Self {
         Bump {
             storage: Box::new(UnsafeCell::new([0u8; ARENA_SIZE])),
             next: AtomicUsize::new(0),
             end: ARENA_SIZE,
-            align: 8,
         }
     }
 
-    pub fn bump(&self, size: usize) -> Option<*mut u8> {
+    pub fn bump(&self, layout: Layout) -> Option<*mut u8> {
         let base = self.storage.get() as *mut u8;
         loop {
             let current = self.next.load(Ordering::Relaxed);
-            let aligned = (current + self.align - 1) & !(self.align - 1); // revisit
-            let new_next = aligned + size;
+            let aligned = (current + layout.align() - 1) & !(layout.align() - 1);
+            let new_next = aligned + layout.size();
             if new_next > self.end {
                 return None; // no room left so OOM
             }

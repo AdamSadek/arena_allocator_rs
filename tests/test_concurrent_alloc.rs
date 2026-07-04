@@ -6,14 +6,17 @@
 use arena_management::{allocator::AdAllocator, bump::Bump};
 use std::collections::HashSet;
 use std::thread;
+use std::alloc::Layout;
 
 #[test]
 fn single_thread_sequence_test() {
     let arena = AdAllocator { bump: Bump::new() };
-    let ptr_1 = arena.bump.bump(64).unwrap() as usize;
-    let ptr_2 = arena.bump.bump(128).unwrap() as usize;
+    let first: Layout = Layout::from_size_align(64, 8).unwrap();
+    let second: Layout = Layout::from_size_align(128, 8).unwrap();
+    let first_ptr = arena.bump.bump(first).unwrap() as usize;
+    let second_ptr = arena.bump.bump(second).unwrap() as usize;
 
-    assert!(ptr_1 <= ptr_2 + arena.bump.end)
+    assert!(first_ptr <= second_ptr + arena.bump.end)
 }
 
 #[test]
@@ -31,7 +34,8 @@ fn multi_thread_sequence_test() {
                     // thread's own ptr list
                     let mut addrs = Vec::new();
                     for i in 0..ALLOCS_PER_THREAD {
-                        addrs.push(arena.bump.bump(i + 'A' as usize).unwrap() as usize);
+                        let layout = Layout::from_size_align(i + 'A' as usize, 8).unwrap();
+                        addrs.push(arena.bump.bump(layout).unwrap() as usize);
                     }
                     addrs
                 })
