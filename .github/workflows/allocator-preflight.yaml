@@ -1,5 +1,7 @@
 name: Arena Allocator CI
 on: [push, pull_request]
+env:
+  CARGO_TERM_QUIET: "true"
 jobs:
   test:
     runs-on: ubuntu-latest
