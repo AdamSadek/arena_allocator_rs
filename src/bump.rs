@@ -30,7 +30,7 @@ impl Bump {
     }
 
     pub fn bump(&self, layout: Layout) -> Option<*mut u8> {
-        let base = self.storage.get() as *mut u8;
+        let base = unsafe { (*self.storage.get()).as_mut_ptr() };
         loop {
             let current = self.next.load(Ordering::Relaxed);
             let aligned = (current + layout.align() - 1) & !(layout.align() - 1);
