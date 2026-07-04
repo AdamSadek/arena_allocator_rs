@@ -13,4 +13,8 @@ jobs:
           cargo test
           cargo install cargo-llvm-cov
           cargo llvm-cov --fail-under-lines 90 --all-features
+      - name: Docs Consistency Check
+        run: |
+          RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
+          cargo test --doc
         
