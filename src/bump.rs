@@ -10,7 +10,7 @@ const ARENA_SIZE: usize = 1024 * 1024;
 pub struct Bump {
     storage: UnsafeCell<Vec<u8>>,
     next: AtomicUsize, // byte OFFSET into ARENA. i.e. "1024 bytes into the arena."
-    pub end: usize,
+    end: usize,
 }
 
 /*  
@@ -54,3 +54,58 @@ impl Bump {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // an allocation must come from the Vec's data buffer, 
+    // not the address of the Vec itself.
+    #[test]
+    fn allocation_lands_inside_the_data_buffer() {
+        let arena = Bump::new();
+
+        // find storage and its size
+        let (start, len) = unsafe {
+            let store = &*arena.storage.get();
+            (store.as_ptr() as usize, store.len())
+        };
+
+        let layout = Layout::from_size_align(64, 8).unwrap();
+        let ptr = arena.bump(layout).unwrap() as usize;
+
+        assert!(
+            ptr >= start && ptr < start + len,
+            "allocation at {ptr:#x} landed outside the arena buffer [{start:#x}, {:#x})",
+            start + len,
+        );
+    }
+
+    #[test]
+    fn single_thread_sequence_test() {
+        let arena = Bump::new();
+        let first: Layout = Layout::from_size_align(64, 8).unwrap();
+        let second: Layout = Layout::from_size_align(128, 8).unwrap();
+        let first_ptr = arena.bump(first).unwrap() as usize;
+        let second_ptr = arena.bump(second).unwrap() as usize;
+
+        assert!(first_ptr <= second_ptr + arena.end)
+    }
+
+    #[test]
+    fn allocate_all_space() {
+        let arena = Bump::new();
+        let layout = Layout::from_size_align(arena.end, 16).unwrap();
+        let ptr = arena.bump(layout);
+        assert!(ptr.is_some());
+    }
+
+    #[test]
+    fn allocate_all_space_and_1_byte_more() {
+        let arena = Bump::new();
+        let layout = Layout::from_size_align(arena.end + 1, 16).unwrap();
+        let ptr = arena.bump(layout);
+        assert!(ptr.is_none());
+    }
+}
+

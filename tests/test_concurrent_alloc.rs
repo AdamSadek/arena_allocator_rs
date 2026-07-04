@@ -9,17 +9,6 @@ use std::thread;
 use std::alloc::Layout;
 
 #[test]
-fn single_thread_sequence_test() {
-    let arena = AdAllocator { bump: Bump::new() };
-    let first: Layout = Layout::from_size_align(64, 8).unwrap();
-    let second: Layout = Layout::from_size_align(128, 8).unwrap();
-    let first_ptr = arena.bump.bump(first).unwrap() as usize;
-    let second_ptr = arena.bump.bump(second).unwrap() as usize;
-
-    assert!(first_ptr <= second_ptr + arena.bump.end)
-}
-
-#[test]
 fn multi_thread_sequence_test() {
     const NUM_OF_THREADS: usize = 10;
     const ALLOCS_PER_THREAD: usize = 25;
